@@ -1,31 +1,9 @@
 screenwidth = 800
 screenheight = 1200
-barwidth = 400
-barheight = 3
-
-minbarx = (screenwidth - barwidth) / 2
-maxbarx = (screenwidth + barwidth) / 2
-
-
-arrowsize = 10
-
-bar = rect barwidth barheight (screenwidth / 2, 100)
-arrow x = polygon [(0, 0),
-                   (arrowsize / 2, arrowsize),
-                   (0 - arrowsize / 2, arrowsize)]
-                   (x, 100 + barheight / 2 + 2)
-
-slider x = collage screenwidth screenheight
-    [ filled blue bar
-    , filled green (arrow x)] --20
-
-slidecap = clamp minbarx maxbarx
-
-addhead x xs = x:xs
 
 dropOne xs =
   if | xs == [] -> []
-     | otherwise -> (tail xs):(map (addhead $ head xs) (dropOne $ tail xs))
+     | otherwise -> (tail xs):(map ((:) $ head xs) (dropOne $ tail xs))
 
 getAlternatives points now =
   if points == [] then []
@@ -41,7 +19,7 @@ expfit start now points =
     logr = logBase 2 (now - start)
     logl = logBase 2 $ toFloat (length points)
     expo = logr / logl
-    expDeviation (p,i) = abs $ now - p - i ^ expo
+    expDeviation (p,i) = (abs $ now - p - i ^ expo) ^ 2
   in
    sum $ map expDeviation (zip (reverse points) [0..length points])
 
@@ -72,16 +50,19 @@ dot y x =
 dotline (y, points) =
   map (dot y) $ points
 
---alt to line
---show many lines
 
--- main = lift (slider . slidecap . fst) (keepWhen Mouse.isDown (150, 0) Mouse.position)
--- main = plainText $ show $ scoreStep (expfit 0) [0..5] 6 100
+nrsteps = 300
 
-nrsteps = 200
+component dropDown nrpoints =
+  let graph =
+     collage screenwidth screenheight
+     $ concatMap dotline $ zip [0..nrsteps] (expstep nrpoints nrsteps)
+  in graph `below` dropDown
 
-main = collage screenwidth screenheight
-        $ concatMap dotline $ zip [0..nrsteps] (expstep 20 nrsteps)
---main = plainText $ show $ scoreAlternatives (expfit 1 0) [0..9] 10
+choices = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30]
 
-    
+
+(drop,choice) = Input.dropDown $ map (\c -> (show c, c)) choices
+
+main = lift (component drop) choice
+
